@@ -44,17 +44,17 @@ contract Proxy
         returns(uint all_amount, uint available_amount, uint  frozen_amount)
     {
         User user = User(user_list.getUserAgentAddr(user_id));
-        var(all_amount_,available_amount_, frozen_amount_) = user.getSheetAmount(sheet_id);
+        var(all_amount_,available_amount_, frozen_amount_) = user.getSheetAmountById(sheet_id);
         all_amount = all_amount_;
         available_amount = available_amount_;
         frozen_amount = frozen_amount_;
     }
     
-    function listRequest(bytes32 user_id, bytes32 seller_user_id, uint sheet_id, uint price, uint sell_qty) 
+    function listRequest(bytes32 user_id, uint sheet_id, uint price, uint sell_qty) 
         returns(uint ret)
     {
         User user = User(user_list.getUserAgentAddr(user_id));
-        ret = user.listRequest(seller_user_id, sheet_id, price, sell_qty);
+        ret = user.listRequest(sheet_id, price, sell_qty);
     }
 
     function delistRequest(bytes32 user_id, bytes32 buy_user_id, uint selected_market_id, uint confirm_qty)

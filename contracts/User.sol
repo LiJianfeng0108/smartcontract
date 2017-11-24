@@ -131,7 +131,7 @@ contract User
         create_id =  CreateID(contract_address.getContractAddress(create_id_name));
         uint sheet_id = create_id.getSheetID();
         sheet_map.insert(sheet_id, StructSheet.value(user_id, sheet_id, class_id, make_date, lev_id, wh_id, place_id, all_amount,
-                                                      available_amount,frozen_amount));
+        available_amount,frozen_amount));
     }
 
     //获取所有仓单的总数量
@@ -219,10 +219,8 @@ contract User
         return funds.getFrozenFunds();
     }
 
-
-
     //挂牌请求 "zhang",0,10,20
-    function listRequest(bytes32 seller_user_id, uint sheet_id, uint price, uint sell_qty) returns( uint)
+    function listRequest(uint sheet_id, uint price, uint sell_qty) returns( uint)
     {
         var sheet = sheet_map.getValue(sheet_id);
         if(sheet.available_amount_ == 0)
@@ -354,36 +352,38 @@ contract User
         //判断该合同是否存在
         if(!trade_map.isExisted(trade_id))
             return -1;
-
+        //卖方
         if(trade_map.data[trade_id].bs_  == "卖")
-            {
-                sheet_map.reduce(sheet_id,qty);
-                funds.insert(qty * price);
-                funds.deductFee(qty*price*fee_rate);
-            }
+        {
+            sheet_map.reduce(sheet_id,qty);
+            funds.insert(qty * price);
+            funds.deductFee(qty*price*fee_rate);
+        }
+        //买方
         else
+        {
+            user_list =  UserList(contract_address.getContractAddress(user_list_name));                 
+            User seller = User(user_list.getUserAgentAddr(opp_id));
+            var(class_id,make_date,lev_id,wh_id,place_id)= seller.getSheetAttribute(sheet_id); 
+
+            if( (ret = sheet_map.isExisted(class_id,make_date,lev_id,wh_id,place_id)) != 0)
+                sheet_map.add(ret,qty);
+            else
             {
-                //初始化user_list
-                user_list =  UserList(contract_address.getContractAddress(user_list_name));
-                        
-                User user_sell = User(user_list.getUserAgentAddr(opp_id));
-                var(class_id,make_date,lev_id,wh_id,place_id)= user_sell.getSheetAttribute(sheet_id); 
-
-              if( (ret = sheet_map.isExisted(class_id,make_date,lev_id,wh_id,place_id)) != 0)
-                //var(existed,ret) = sheet_map.isExisted(class_id,make_date,lev_id,wh_id,place_id); 
-                //if( sheet_map.isExisted(class_id,make_date,lev_id,wh_id,place_id) )
-                     sheet_map.add(ret,qty);
-                else
-                    {
-                        sheet_id = create_id.getSheetID();
-                        sheet_map.insert(sheet_id, StructSheet.value(user_id, sheet_id, class_id, make_date, lev_id, wh_id, place_id,qty,qty,0));
-                    }
-
-                funds.reduce(qty * price);
+                    sheet_id = create_id.getSheetID();
+                    sheet_map.insert(sheet_id, StructSheet.value(user_id, sheet_id, class_id, make_date, lev_id, wh_id, place_id,qty,qty,0));
             }
-            return 0;
+            //获得仓单,减少资金
+            funds.reduce(qty * price); //TODO 判断资金是否够用
+        }
+        //修改合同状态
+        modifyTradeState(trade_id);
+        return 0;
     }
-
+    function modifyTradeState(uint trade_id)
+    {
+        trade_map.data[trade_id].trade_state_ = "已交收";
+    }
     //更新卖方挂牌请求
     function updateListReq(uint market_id, uint deal_qty)
     {
@@ -391,11 +391,11 @@ contract User
         for(uint i = 0; i<list_num; ++i)
         {
             if(list_req[i].market_id_ == market_id)
-                {
-                    list_req[i].deal_qty_      +=     deal_qty;
-                    list_req[i].rem_qty_       -=     deal_qty;
-                    break;
-                }
+            {
+                list_req[i].deal_qty_      +=     deal_qty;
+                list_req[i].rem_qty_       -=     deal_qty;
+                break;
+            }
         }
     }
 
@@ -417,26 +417,26 @@ contract User
     {
         //冻结仓单
         if( ! freeze(sheet_id, qty))
-            {
-                //TODO event
-                ret = -1;
-                return ret;
-            }
+        {
+            //TODO event
+            ret = -1;
+            return ret;
+        }
 
-            create_id =  CreateID(contract_address.getContractAddress(create_id_name));
-            uint  neg_id = create_id.getNegID();//协商交易编号
+        create_id =  CreateID(contract_address.getContractAddress(create_id_name));
+        uint  neg_id = create_id.getNegID();//协商交易编号
 
-            //更新协商交易请求列表（发送）
-            neg_req_send_array.push( NegSendRequest(sheet_id,qty,price,neg_id,opp_id,"未成交") );
+        //更新协商交易请求列表（发送）
+        neg_req_send_array.push( NegSendRequest(sheet_id,qty,price,neg_id,opp_id,"未成交") );
 
-            //初始化user_list
-            user_list =  UserList(contract_address.getContractAddress(user_list_name));
-            //调用对手方协商交易请求的接收方法
-            User buy_user =  User( user_list.getUserAgentAddr(opp_id) );
-            //TODO assert 判断buy_user不为空
-            buy_user.recNegReq(sheet_id, qty, price,neg_id, my_user_id);
+        //初始化user_list
+        user_list =  UserList(contract_address.getContractAddress(user_list_name));
+        //调用对手方协商交易请求的接收方法
+        User buy_user =  User( user_list.getUserAgentAddr(opp_id) );
+        //TODO assert 判断buy_user不为空
+        buy_user.recNegReq(sheet_id, qty, price,neg_id, my_user_id);
 
-            ret = 0;
+        ret = 0;
     }
 
     //接收协商交易请求 卖方调用买方
@@ -462,51 +462,51 @@ contract User
     {
         //判断数组是否为空
         if(neg_req_receive_array.length ==0)
-            {
-                ret = -1;
-                return;
-            }
+        {
+            ret = -1;
+            return;
+        }
 
-            for(uint i= 0; i<neg_req_receive_array.length; i++ )
-            {
-                if(neg_req_receive_array[i].neg_id_ == neg_id)
-                    break;
-            }
-            //判断可用资金是否足够
-            uint payment = neg_req_receive_array[i].neg_qty_ * neg_req_receive_array[i].price_;
-            if( payment > funds.getAvaFunds() )
-                {
-                    ret = -2;
-                    return;
-                }
+        for(uint i= 0; i<neg_req_receive_array.length; i++ )
+        {
+            if(neg_req_receive_array[i].neg_id_ == neg_id)
+                break;
+        }
+        //判断可用资金是否足够
+        uint payment = neg_req_receive_array[i].neg_qty_ * neg_req_receive_array[i].price_;
+        if( payment > funds.getAvaFunds() )
+        {
+            ret = -2;
+            return;
+        }
 
-                //初始化user_list
-                user_list =  UserList(contract_address.getContractAddress(user_list_name));
+        //初始化user_list
+        user_list =  UserList(contract_address.getContractAddress(user_list_name));
 
-                //构建成交
-                bytes32 sell_user_id =  neg_req_receive_array[i].opp_id_;
-                User sell_user =  User( user_list.getUserAgentAddr(sell_user_id) );
+        //构建成交
+        bytes32 sell_user_id =  neg_req_receive_array[i].opp_id_;
+        User sell_user =  User( user_list.getUserAgentAddr(sell_user_id) );
 
-                //获取合同编号
-                CreateID create_id = CreateID(contract_address.getContractAddress(create_id_name));
-                uint trade_id = create_id.getTradeID();
-                uint date = now;
+        //获取合同编号
+        CreateID create_id = CreateID(contract_address.getContractAddress(create_id_name));
+        uint trade_id = create_id.getTradeID();
+        uint date = now;
 
-                ret = recordNegTrade(trade_id, date, buy_user_id, sell_user_id, "买", neg_id);
-                if(ret != 0)
-                    {
-                        ret = -3;
-                        return ;
-                    }
+        ret = recordNegTrade(trade_id, date, buy_user_id, sell_user_id, "买", neg_id);
+        if(ret != 0)
+        {
+            ret = -3;
+            return ;
+        }
 
-                    ret = sell_user.recordNegTrade(trade_id,date, buy_user_id, sell_user_id, "卖", neg_id);
-                    if(ret != 0)
-                        {
-                            ret = -4;
-                            return ;
-                        }
+        ret = sell_user.recordNegTrade(trade_id,date, buy_user_id, sell_user_id, "卖", neg_id);
+        if(ret != 0)
+        {
+            ret = -4;
+            return ;
+        }
 
-                        ret = 0;    
+        ret = 0;    
     }
 
     //构建合同
@@ -516,47 +516,47 @@ contract User
         uint price;
         uint qty;
         if(bs == "卖")
+        {
+            //判断发送请求数组是否为空
+            if(neg_req_send_array.length ==0)
+                return -1;
+
+            for(uint i= 0; i < neg_req_send_array.length; i++ )
             {
-                //判断发送请求数组是否为空
-                if(neg_req_send_array.length ==0)
-                    return -1;
-
-                for(uint i= 0; i < neg_req_send_array.length; i++ )
-                {
-                    if(neg_req_send_array[i].neg_id_ == neg_id)
-                        break;
-                }
-                sheet_id    =   neg_req_send_array[i].sheet_id_;
-                price   =   neg_req_send_array[i].price_;
-                qty     =   neg_req_send_array[i].neg_qty_;
-
-                trade_map.insert(trade_id, StructTrade.value(date,trade_id,sheet_id,price,qty,qty*price,qty*price*fee_rate,sell_user_id,buy_user_id,bs,"未交收"));
-
-                //funds.insert(neg_req_send_array[i].qty_ * neg_req_send_array[i].price_);
+                if(neg_req_send_array[i].neg_id_ == neg_id)
+                    break;
             }
+            sheet_id    =   neg_req_send_array[i].sheet_id_;
+            price   =   neg_req_send_array[i].price_;
+            qty     =   neg_req_send_array[i].neg_qty_;
+
+            trade_map.insert(trade_id, StructTrade.value(date,trade_id,sheet_id,price,qty,qty*price,qty*price*fee_rate,sell_user_id,buy_user_id,bs,"未交收"));
+
+            //funds.insert(neg_req_send_array[i].qty_ * neg_req_send_array[i].price_);
+        }
         else
+        {
+            //判断接收请求数组是否为空
+            if(neg_req_receive_array.length ==0)
+                return -2;
+
+            for(uint k= 0; k < neg_req_receive_array.length; k++ )
             {
-                //判断接收请求数组是否为空
-                if(neg_req_receive_array.length ==0)
-                    return -2;
-
-                for(uint k= 0; k < neg_req_receive_array.length; k++ )
-                    {
-                        if(neg_req_receive_array[k].neg_id_ == neg_id)
-                            break;
-                    }
-                sheet_id    =   neg_req_receive_array[k].sheet_id_;
-                price   =   neg_req_receive_array[k].price_;
-                qty     =   neg_req_receive_array[k].neg_qty_;
-
-                trade_map.insert(trade_id, StructTrade.value(date,trade_id,sheet_id,price,qty,qty*price,qty*price*fee_rate,buy_user_id,sell_user_id,bs,"未成交"));
-
-                //funds.reduce(neg_req_receive_array[k].qty_ * neg_req_receive_array[k].price_);
-                funds.freeze(neg_req_receive_array[k].neg_qty_ * neg_req_receive_array[k].price_);
-                admin = Admin(contract_address.getContractAddress("Admin"));
-                admin.insertConfirmNegReq(my_user_id, sell_user_id, trade_id,qty,qty*price,qty*price*fee_rate);
+                if(neg_req_receive_array[k].neg_id_ == neg_id)
+                    break;
             }
-            return 0;
+            sheet_id    =   neg_req_receive_array[k].sheet_id_;
+            price   =   neg_req_receive_array[k].price_;
+            qty     =   neg_req_receive_array[k].neg_qty_;
+
+            trade_map.insert(trade_id, StructTrade.value(date,trade_id,sheet_id,price,qty,qty*price,qty*price*fee_rate,buy_user_id,sell_user_id,bs,"未成交"));
+
+            //funds.reduce(neg_req_receive_array[k].qty_ * neg_req_receive_array[k].price_);
+            funds.freeze(neg_req_receive_array[k].neg_qty_ * neg_req_receive_array[k].price_);
+            admin = Admin(contract_address.getContractAddress("Admin"));
+            admin.insertConfirmNegReq(my_user_id, sell_user_id, trade_id,qty,qty*price,qty*price*fee_rate);
+            }
+        return 0;
     }
 
     //获取合同数据
