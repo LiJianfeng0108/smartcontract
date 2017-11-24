@@ -11,10 +11,11 @@ contract Admin
         bytes32 user_id_;
         bytes32 user_sell_id_;
         uint    trade_id_;
-        uint    trade_qty_;
+        uint    trade_qty_;//成交量
         bytes32 class_id_;
-        uint    funds_;
-        uint    fee_;
+        uint    price_;//成家价格
+        uint    funds_;//成交资金总量
+        uint    fee_;//手续费
         bool    status_;
     }
     struct ConfirmNegReq
@@ -60,9 +61,9 @@ contract Admin
         }
     }
 
-    function insertConfirmListReq(bytes32 user_id, bytes32 user_sell_id,uint trade_id,bytes32 class_id,uint trade_qty,uint funds,uint fee)
+    function insertConfirmListReq(bytes32 user_id, bytes32 user_sell_id,uint trade_id,bytes32 class_id,uint trade_qty,uint price, uint funds,uint fee)
     {
-        confirm_list_req.push( ConfirmListReq(user_id,user_sell_id,trade_id,trade_qty,class_id,funds,fee,false));
+        confirm_list_req.push( ConfirmListReq(user_id,user_sell_id,trade_id,trade_qty,class_id, price,funds,fee,false));
     }
 
     function insertConfirmNegReq(bytes32 user_id, bytes32 user_sell_id, uint trade_id,uint trade_qty,uint funds,uint fee)
@@ -146,7 +147,7 @@ contract Admin
     {
         return user_list.getUserNum();
     }
-    /*
+    
     //获取用户id和账户地址
     function getUserInfo(uint index) returns(string user_id_str, address external_addr)
     {
@@ -154,7 +155,7 @@ contract Admin
         user_id_str =   LibString.bytes32ToString(user_id);
         external_addr = ret_external_addr;
     }
-    */
+   
 
     //获取用户仓单数量、资金数据
     function getSheetFunds(uint index) returns(string user_id_str, address external_addr,uint total_sheet, uint available_sheet, uint frozen_sheet, uint total_funds,uint available_funds, uint frozen_funds)
@@ -164,6 +165,7 @@ contract Admin
         int     user_auth;
 
         (external_addr,agent_addr,user_id,user_auth) = user_list.getUserInfoByIndex(index);
+        user_id_str = LibString.bytes32ToString(user_id);
         user            =   User(agent_addr);
         (total_sheet,available_sheet,frozen_sheet) =   user.getSheetTotalAmount();
         total_funds     =   user.getTotalFunds();
@@ -180,8 +182,9 @@ contract Admin
     //获取仓单数量
     function getSheetAmount(bytes32 user_id, uint index) returns(uint total_amount,uint frozen_amount,uint available_amount)
     {
+        
         user  =   User(user_list.getUserAgentAddr(user_id));
-        (total_amount,frozen_amount,available_amount) = user.getSheetAmount(index);
+        (total_amount,frozen_amount,available_amount) = user.getSheetAmountByIndex(index);
 
     }
     //获取仓单数据固定属性
@@ -211,13 +214,14 @@ contract Admin
     }
 
     //获取挂牌交易确认请求列表的元素
-    function getConfirmListReq(uint index) external returns(string user_id,string user_sell_id,uint trade_id,string class_id,uint trade_qty,uint funds,uint fee,bool status)
+    function getConfirmListReq(uint index) external returns(string user_id,string user_sell_id,uint trade_id,string class_id,uint trade_qty,uint price, uint funds,uint fee,bool status)
     {
             user_id         =   LibString.bytes32ToString(confirm_list_req[index].user_id_);
             user_sell_id    =   LibString.bytes32ToString(confirm_list_req[index].user_sell_id_);
             trade_id        =   confirm_list_req[index].trade_id_;
             class_id        =   LibString.bytes32ToString(confirm_list_req[index].class_id_);
             trade_qty       =   confirm_list_req[index].trade_qty_;
+            price           =   confirm_list_req[index].price_;
             funds           =   confirm_list_req[index].funds_;
             fee             =   confirm_list_req[index].fee_;
             status          =   confirm_list_req[index].status_;

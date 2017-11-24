@@ -148,7 +148,7 @@ contract User
     }
 
     //获取持有者的某一种仓单的数量
-    function getSheetAmount(uint sheet_id) returns (uint all_amount, uint available_amount, uint frozen_amount)
+    function getSheetAmountById(uint sheet_id) returns (uint all_amount, uint available_amount, uint frozen_amount)
     {
         StructSheet.value memory sheet = sheet_map.getValue(sheet_id);
         all_amount = sheet.all_amount_;
@@ -162,27 +162,6 @@ contract User
         StructSheet.value memory sheet = sheet_map.getValueByIndex(index);
         all_amount = sheet.all_amount_;
         available_amount = sheet.available_amount_;
-        frozen_amount = sheet.frozen_amount_;
-    }
-
-    //获取持有者的仓单总数量
-    function getSheetAllAmount(uint sheet_id) returns (uint all_amount)
-    {
-        StructSheet.value memory sheet = sheet_map.getValue(sheet_id);
-        all_amount = sheet.all_amount_;
-    }
-
-    //获取持有者的仓单可用数量
-    function getSheetAvailableAmount(uint sheet_id) returns (uint available_amount)
-    {
-        StructSheet.value memory sheet = sheet_map.getValue(sheet_id);
-        available_amount = sheet.available_amount_;
-    }
-    
-    //获取持有者的仓单冻结数量
-    function getSheetFrozenAmount(uint sheet_id) returns (uint frozen_amount)
-    {
-        StructSheet.value memory sheet = sheet_map.getValue(sheet_id);
         frozen_amount = sheet.frozen_amount_;
     }
 
@@ -351,7 +330,7 @@ contract User
         {
            funds.freeze(confirm_qty * temp_market.price_);
            admin = Admin(contract_address.getContractAddress("Admin"));
-           admin.insertConfirmListReq(my_user_id, opp_user_id,trade_id,temp_market.class_id_,confirm_qty,confirm_qty*temp_market.price_,confirm_qty*temp_market.price_*fee_rate);
+           admin.insertConfirmListReq(my_user_id, opp_user_id,trade_id,temp_market.class_id_,confirm_qty,temp_market.price_,confirm_qty*temp_market.price_,confirm_qty*temp_market.price_*fee_rate);
         }
 
          ret = 0;
@@ -397,7 +376,7 @@ contract User
                 else
                     {
                         sheet_id = create_id.getSheetID();
-                        sheet_map.insert(sheet_id, StructSheet.value(user_id, sheet_id, class_id, make_date, lev_id, wh_id, place_id,qty,0,qty));
+                        sheet_map.insert(sheet_id, StructSheet.value(user_id, sheet_id, class_id, make_date, lev_id, wh_id, place_id,qty,qty,0));
                     }
 
                 funds.reduce(qty * price);
@@ -423,7 +402,7 @@ contract User
     //冻结仓单
     function freeze(uint sheet_id, uint amount) returns (bool)
     {
-        var available_amount  = getSheetAvailableAmount(sheet_id);
+        var (, available_amount,)  = getSheetAmountById(sheet_id);
         if(amount > available_amount)  
             return false;
 
