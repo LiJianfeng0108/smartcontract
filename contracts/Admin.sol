@@ -151,7 +151,7 @@ contract Admin
     //获取用户id和账户地址
     function getUserInfo(uint index) returns(string user_id_str, address external_addr)
     {
-        var(ret_external_addr,agent_addr,user_id,user_auth) = user_list.getUserInfoByIndex(index);
+        var(ret_external_addr, ,user_id, ) = user_list.getUserInfoByIndex(index);
         user_id_str =   LibString.bytes32ToString(user_id);
         external_addr = ret_external_addr;
     }

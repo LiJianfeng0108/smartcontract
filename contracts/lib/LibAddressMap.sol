@@ -88,7 +88,7 @@ library LibAddressMap
     {
         if(it + 1 > self.keyIndex.length)
         {
-            Data.value empty_value;
+            Data.value  memory empty_value;
             return empty_value;
         }
         return self.data[ self.keyIndex[it] ];

@@ -98,27 +98,10 @@ contract User
     {
         contract_address = ContractAddress(addr); 
     }
-    function setMarketName(string name)
-    {
-        market_name = name;
-    }
-    function setCreateIDName(string name)
-    {
-        create_id_name = name;
-    }
-    function setUserListName(string name)
-    {
-        user_list_name = name;
-    }
     function setUserID(bytes32 id)
     {
         my_user_id = id;
     }
-    function setAdmin(string admin_name)
-    {
-        admin =  Admin(contract_address.getContractAddress(admin_name));
-    }
-
     //初始化CreateID合约变量
     function setCreateID()
     {
@@ -488,7 +471,7 @@ contract User
         User sell_user =  User( user_list.getUserAgentAddr(sell_user_id) );
 
         //获取合同编号
-        CreateID create_id = CreateID(contract_address.getContractAddress(create_id_name));
+        create_id = CreateID(contract_address.getContractAddress(create_id_name));
         uint trade_id = create_id.getTradeID();
         uint date = now;
 

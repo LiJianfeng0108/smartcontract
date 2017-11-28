@@ -108,7 +108,7 @@ contract  Market
     }
 
     //获取行情
-    function getMarket_1(uint market_id)
+    function getMarket_1(uint id)
         returns (
             uint        date,    //挂牌日期
             uint        ret_market_id,        //挂牌编号
@@ -121,7 +121,7 @@ contract  Market
             bytes32      price_type      //报价类型
                 )
     {
-        StructMarket.value memory temp_value = market_map.getValue(market_id);
+        StructMarket.value memory temp_value = market_map.getValue(id);
         date       = temp_value.date_;
         ret_market_id  = temp_value.market_id_;
         sheet_id   = temp_value.sheet_id_;
@@ -134,7 +134,7 @@ contract  Market
     }
    
 
-   function getMarket_2(uint market_id)
+   function getMarket_2(uint id)
         returns (
             uint        price,         //价格（代替浮点型）
             uint        list_qty,       //挂牌量
@@ -147,7 +147,7 @@ contract  Market
         )
 
     {
-        StructMarket.value memory temp_value = market_map.getValue(market_id);
+        StructMarket.value memory temp_value = market_map.getValue(id);
         price      = temp_value.price_;
         list_qty   = temp_value.list_qty_;
         deal_qty   = temp_value.deal_qty_;
